@@ -6,6 +6,7 @@ set(CMAKE_VERBOSE_MAKEFILE TRUE)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/..)
 find_package(SQLite3 REQUIRED)
 
 add_executable(${PROJECT_NAME} test_package.c)

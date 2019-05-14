@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.1.2)
 project(sqlite3 C)
 
-include(conanbuildinfo.cmake)
-conan_basic_setup()
-
 # Add some options from https://sqlite.org/compile.html
 option(ENABLE_JSON1 "Enable JSON SQL functions")
 option(ENABLE_COLUMN_METADATA "Enable additional APIs that provide convenient access to meta-data about tables and queries")
@@ -20,9 +17,9 @@ option(HAVE_POSIX_FALLOCATE "Use posix_fallocate()")
 option(HAVE_STRERROR_R "Use strerror_r()")
 option(HAVE_USLEEP "Use usleep() system call to implement the xSleep method")
 
-add_library(${PROJECT_NAME} source_subfolder/sqlite3.c
-                            source_subfolder/sqlite3.h
-                            source_subfolder/sqlite3ext.h)
+add_library(${PROJECT_NAME} sources/sqlite3.c
+                            sources/sqlite3.h
+                            sources/sqlite3ext.h)
 if (WIN32 AND MSVC AND BUILD_SHARED_LIBS)
     set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
 endif(MSVC AND BUILD_SHARED_LIBS)

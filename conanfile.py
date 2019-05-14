@@ -2,21 +2,19 @@
 # -*- coding: utf-8 -*-
 
 import os
-from conans import ConanFile, CMake, tools
+from nxtools import NxConanFile
+from conans import CMake, tools
 
 
-class ConanSqlite3(ConanFile):
+class ConanSqlite3(NxConanFile):
     name = "sqlite3"
     version = "3.28.0"
     description = "Self-contained, serverless, in-process SQL database engine."
     url = "http://github.com/bincrafters/conan-sqlite3"
     homepage = "https://www.sqlite.org"
     author = "Bincrafters <bincrafters@gmail.com>"
-    topics = ("conan", "sqlite", "database", "sql", "serverless")
     license = "Public Domain"
-    generators = "cmake"
     settings = "os", "compiler", "arch", "build_type"
-    exports = ["LICENSE.md"]
     exports_sources = ["CMakeLists.txt", "FindSQLite3.cmake"]
     options = {"shared": [True, False],
                "fPIC": [True, False],
@@ -30,37 +28,43 @@ class ConanSqlite3(ConanFile):
                "enable_rtree": [True, False],
                "omit_load_extension": [True, False]
                }
-    default_options = {"shared": False,
-                       "fPIC": True,
-                       "threadsafe": 1,
-                       "enable_column_metadata": False,
-                       "enable_explain_comments": False,
-                       "enable_fts3": False,
-                       "enable_fts4": False,
-                       "enable_fts5": False,
-                       "enable_json1": False,
-                       "enable_rtree": False,
-                       "omit_load_extension": False
-                       }
-    _source_subfolder = "source_subfolder"
+    default_options = "shared=False",                      \
+                      "fPIC=True",                         \
+                      "threadsafe=1",                      \
+                      "enable_column_metadata=False",      \
+                      "enable_explain_comments=False",     \
+                      "enable_fts3=False",                 \
+                      "enable_fts4=False",                 \
+                      "enable_fts5=False",                 \
+                      "enable_json1=False",                \
+                      "enable_rtree=False",                \
+                      "omit_load_extension=False"
+    archive_name = ""
 
-    def source(self):
-        sha256 = "d02fc4e95cfef672b45052e221617a050b7f2e20103661cda88387349a9b1327"
-        download_url = "{}/2019".format(self.homepage)
+    def do_source(self):
         major, minor, patch = self.version.split(".")
-        archive_name = "sqlite-amalgamation-" + major + minor.rjust(2, "0") + patch.rjust(2, "0") + "00"
-        tools.get("{}/{}.zip".format(download_url, archive_name), sha256=sha256)
-        os.rename(archive_name, self._source_subfolder)
+        self.archive_name = "sqlite-amalgamation-" + major + minor.rjust(2, "0") + patch.rjust(2, "0") + "00.zip"
+        self.retrieve("d02fc4e95cfef672b45052e221617a050b7f2e20103661cda88387349a9b1327",
+                [
+                    'vendor://sqlite/sqlite3/{archive_name}'.format(archive_name=self.archive_name),
+                    'https://www.sqlite.org/2019/{archive_name}'.format(archive_name=self.archive_name)
+                ], self.archive_name)
+        tools.unzip(self.archive_name)
+        os.rename(self.archive_name[:-4], 'sources')
+
 
     def config_options(self):
         if self.settings.os == "Windows":
             del self.options.fPIC
 
-    def configure(self):
+    def do_configure(self):
         del self.settings.compiler.libcxx
 
     def _configure_cmake(self):
         cmake = CMake(self)
+        cmake.build_dir = "{staging_dir}/build".format(staging_dir=self.staging_dir)
+        tools.unzip(self.archive_name, cmake.build_dir)
+        cmake.definitions["CMAKE_INSTALL_PREFIX"] = self.staging_dir
         cmake.definitions["THREADSAFE"] = self.options.threadsafe
         cmake.definitions["ENABLE_COLUMN_METADATA"] = self.options.enable_column_metadata
         cmake.definitions["ENABLE_EXPLAIN_COMMENTS"] = self.options.enable_explain_comments
@@ -86,23 +90,17 @@ class ConanSqlite3(ConanFile):
         cmake.configure()
         return cmake
 
-    def build(self):
+    def do_build(self):
         cmake = self._configure_cmake()
         cmake.build()
 
-    def package(self):
-        header = tools.load(os.path.join(self._source_subfolder, "sqlite3.h"))
-        license_content = header[3:header.find("***", 1)]
-        tools.save("LICENSE", license_content)
-
-        self.copy("LICENSE", dst="licenses")
-        self.copy("FindSQLite3.cmake")
-
+    def do_package(self):
+        self.copy("FindSQLite3.cmake", dst=self.staging_dir)
         cmake = self._configure_cmake()
         cmake.install()
 
-    def package_info(self):
-        self.cpp_info.libs = tools.collect_libs(self)
+    def do_package_info(self):
+        self.cpp_info.libs = ["sqlite3"]
         if self.settings.os == "Linux":
             if self.options.threadsafe:
                 self.cpp_info.libs.append("pthread")
