@@ -1,18 +1,19 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#. -*- coding: utf-8 -*-
 
 import os
 from nxtools import NxConanFile
 from conans import CMake, tools
+from shutil import copy
 
 
 class ConanSqlite3(NxConanFile):
     name = "sqlite3"
     version = "3.28.0"
     description = "Self-contained, serverless, in-process SQL database engine."
-    url = "http://github.com/bincrafters/conan-sqlite3"
+    url = "https://www.sqlite.org"
     homepage = "https://www.sqlite.org"
-    author = "Bincrafters <bincrafters@gmail.com>"
+    author = "Bincrafters <bincrafters@gmail.com>, hoxnox <hoxnox@gmail.com>"
     license = "Public Domain"
     settings = "os", "compiler", "arch", "build_type"
     exports_sources = ["CMakeLists.txt", "FindSQLite3.cmake"]
@@ -49,8 +50,6 @@ class ConanSqlite3(NxConanFile):
                     'vendor://sqlite/sqlite3/{archive_name}'.format(archive_name=self.archive_name),
                     'https://www.sqlite.org/2019/{archive_name}'.format(archive_name=self.archive_name)
                 ], self.archive_name)
-        tools.unzip(self.archive_name)
-        os.rename(self.archive_name[:-4], 'sources')
 
 
     def config_options(self):
@@ -61,9 +60,12 @@ class ConanSqlite3(NxConanFile):
         del self.settings.compiler.libcxx
 
     def _configure_cmake(self):
+        tools.unzip(self.archive_name)
+        os.unlink(self.archive_name)
+        os.rename(self.archive_name[:-4], self.staging_dir)
+        copy("CMakeLists.txt", self.staging_dir)
         cmake = CMake(self)
-        cmake.build_dir = "{staging_dir}/build".format(staging_dir=self.staging_dir)
-        tools.unzip(self.archive_name, cmake.build_dir)
+        cmake.build_dir = self.staging_dir
         cmake.definitions["CMAKE_INSTALL_PREFIX"] = self.staging_dir
         cmake.definitions["THREADSAFE"] = self.options.threadsafe
         cmake.definitions["ENABLE_COLUMN_METADATA"] = self.options.enable_column_metadata
@@ -87,17 +89,15 @@ class ConanSqlite3(NxConanFile):
             cmake.definitions["HAVE_POSIX_FALLOCATE"] = False
         if self.settings.os == "Android":
             cmake.definitions["HAVE_POSIX_FALLOCATE"] = False
-        cmake.configure()
+        cmake.configure(source_dir=self.staging_dir)
         return cmake
 
     def do_build(self):
         cmake = self._configure_cmake()
-        cmake.build()
-
-    def do_package(self):
-        self.copy("FindSQLite3.cmake", dst=self.staging_dir)
-        cmake = self._configure_cmake()
         cmake.install()
+        self.copy("FindSQLite3.cmake", dst=self.staging_dir)
+        self.copy("sqlite3.h", src=self.staging_dir, dst="{stage}/include".format(stage=self.staging_dir))
+        self.copy("sqlite3ext.h", src=self.staging_dir, dst="{stage}/include".format(stage=self.staging_dir))
 
     def do_package_info(self):
         self.cpp_info.libs = ["sqlite3"]

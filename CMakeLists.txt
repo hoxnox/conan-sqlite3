@@ -17,9 +17,7 @@ option(HAVE_POSIX_FALLOCATE "Use posix_fallocate()")
 option(HAVE_STRERROR_R "Use strerror_r()")
 option(HAVE_USLEEP "Use usleep() system call to implement the xSleep method")
 
-add_library(${PROJECT_NAME} sources/sqlite3.c
-                            sources/sqlite3.h
-                            sources/sqlite3ext.h)
+add_library(${PROJECT_NAME} ./sqlite3.c ./sqlite3.h ./sqlite3ext.h)
 if (WIN32 AND MSVC AND BUILD_SHARED_LIBS)
     set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
 endif(MSVC AND BUILD_SHARED_LIBS)
